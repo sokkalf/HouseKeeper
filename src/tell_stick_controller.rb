@@ -27,6 +27,7 @@ class Device
         :id => @id,
         :name => @name,
         :status => @status,
+        :error => @error,
     }.to_json(*a)
   end
 
@@ -34,6 +35,11 @@ class Device
     output = %x{tdtool --on #{@id}}
     if (output =~ /Success$/) != nil
       @status = 'ON'
+    else
+      class << self
+        attr_accessor :error
+      end
+      self.error = ErrorMessage.new(502, 'Device not onlined')
     end
     self
   end
@@ -42,6 +48,11 @@ class Device
     output = %x{tdtool --off #{@id}}
     if (output =~ /Success$/) != nil
       @status = 'OFF'
+    else
+      class << self
+        attr_accessor :error
+      end
+      self.error = ErrorMessage.new(502, 'Device not offlined')
     end
     self
   end
@@ -62,6 +73,7 @@ class TellStickController
     lines.shift
     devices = Hash.new
     lines.each do |line|
+      #TODO: find a better way to do this..
       id=line.split[0] # first element
       name=line.split.slice(1..-2).join(' ') # middle elements
       status=line.split[-1] # last element
