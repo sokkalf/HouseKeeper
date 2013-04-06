@@ -10,8 +10,13 @@ configure do
 end
 
 ts = TellStickController.new
+log = Logger.new('housekeeper.log')
 
 get '/' do
+  'Welcome to HouseKeeper!'
+end
+
+get '/list' do
   content_type :json
   ts.list_devices.to_json
 end

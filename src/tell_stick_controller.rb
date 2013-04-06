@@ -1,3 +1,15 @@
+require 'logger'
+
+module Logging
+  def logger
+    Logging.logger
+  end
+
+  def self.logger
+    @logger ||= Logger.new('housekeeper.log')
+  end
+end
+
 class ErrorMessage
   attr_accessor :error, :message
 
@@ -14,6 +26,7 @@ class ErrorMessage
 end
 
 class Device
+  include Logging
   attr_accessor :id, :name, :status
 
   def initialize(id, name, status)
@@ -32,27 +45,41 @@ class Device
   end
 
   def online
+    logger.info('Onlining device ' + @id + ' (' + @name + ')')
+    if @status == 'ON'
+      logger.info('Device ' + @id + ' (' + @name + ') already online, doing nothing.')
+      return self
+    end
     output = %x{tdtool --on #{@id}}
     if (output =~ /Success$/) != nil
+      logger.info('Onlining device ' + @id + ' (' + @name + ') was successful')
       @status = 'ON'
     else
       class << self
         attr_accessor :error
       end
       self.error = ErrorMessage.new(502, 'Device not onlined')
+      logger.info('Onlining device ' + @id + ' (' + @name + ') failed with error : ' + self.error)
     end
     self
   end
 
   def offline
+    logger.info('Offlining device ' + @id + ' (' + @name + ')')
+    if @status == 'OFF'
+      logger.info('Device ' + @id + ' (' + @name + ') already offline, doing nothing.')
+      return self
+    end
     output = %x{tdtool --off #{@id}}
     if (output =~ /Success$/) != nil
+      logger.info('Offlining device ' + @id + ' (' + @name + ') was successful')
       @status = 'OFF'
     else
       class << self
         attr_accessor :error
       end
       self.error = ErrorMessage.new(502, 'Device not offlined')
+      logger.info('Offlining device ' + @id + ' (' + @name + ') failed with error : ' + self.error)
     end
     self
   end
