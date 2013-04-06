@@ -16,6 +16,7 @@ get '/' do
   ts.list_devices.to_json
 end
 
+# TODO: don't use GET for these..
 get '/online/:id' do |id|
   content_type :json
   ts.online_device(id).to_json
