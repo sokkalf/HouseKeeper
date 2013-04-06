@@ -35,7 +35,7 @@ class Device
     if (output =~ /Success$/) != nil
       @status = 'ON'
     end
-    Device.new(@id, @name, @status)
+    self
   end
 
   def offline
@@ -43,7 +43,7 @@ class Device
     if (output =~ /Success$/) != nil
       @status = 'OFF'
     end
-    Device.new(@id, @name, @status)
+    self
   end
 
   def toggle
@@ -69,6 +69,11 @@ class TellStickController
       devices = {device.id => device}
     end
     devices
+  end
+
+  def show_device(id)
+    device = list_devices[id]
+    device != nil ? device : ErrorMessage.new(501, 'No such device: ' + id)
   end
 
   def online_device(id)

@@ -16,18 +16,39 @@ get '/' do
   ts.list_devices.to_json
 end
 
+get '/detail/:id' do |id|
+  content_type :json
+  device = ts.show_device(id)
+  if device.instance_of?(ErrorMessage)
+    status device.error
+  end
+  device.to_json
+end
+
 # TODO: don't use GET for these..
 get '/online/:id' do |id|
   content_type :json
-  ts.online_device(id).to_json
+  device = ts.online_device(id)
+  if device.instance_of?(ErrorMessage)
+    status device.error
+  end
+  device.to_json
 end
 
 get '/offline/:id' do |id|
   content_type :json
-  ts.offline_device(id).to_json
+  device = ts.offline_device(id)
+  if device.instance_of?(ErrorMessage)
+    status device.error
+  end
+  device.to_json
 end
 
 get '/toggle/:id' do |id|
   content_type :json
-  ts.toggle_device(id).to_json
+  device = ts.toggle_device(id)
+  if device.instance_of?(ErrorMessage)
+    status device.error
+  end
+  device.to_json
 end
