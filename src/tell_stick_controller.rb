@@ -36,12 +36,20 @@ class Device
   end
 
   def to_json(*a)
-    {
-        :id => @id,
-        :name => @name,
-        :status => @status,
-        :error => @error,
-    }.to_json(*a)
+    if @error == nil
+      {
+          :id => @id,
+          :name => @name,
+          :status => @status,
+      }.to_json(*a)
+    else
+      {
+          :id => @id,
+          :name => @name,
+          :status => @status,
+          :error => @error,
+      }.to_json(*a)
+    end
   end
 
   def online
@@ -58,7 +66,7 @@ class Device
       class << self
         attr_accessor :error
       end
-      self.error = ErrorMessage.new(502, 'Device not onlined')
+      self.error = ErrorMessage.new(502, 'Device not onlined').message
       logger.info('Onlining device ' + @id + ' (' + @name + ') failed with error : ' + self.error)
     end
     self
@@ -78,7 +86,7 @@ class Device
       class << self
         attr_accessor :error
       end
-      self.error = ErrorMessage.new(502, 'Device not offlined')
+      self.error = ErrorMessage.new(502, 'Device not offlined').message
       logger.info('Offlining device ' + @id + ' (' + @name + ') failed with error : ' + self.error)
     end
     self
@@ -97,7 +105,7 @@ class TellStickController
   def list_devices
     output = %x{tdtool --list}
     lines = output.split("\n")
-    lines.shift
+    lines.shift # whack the first line
     devices = Hash.new
     lines.each do |line|
       #TODO: find a better way to do this..

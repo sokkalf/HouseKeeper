@@ -10,7 +10,6 @@ configure do
 end
 
 ts = TellStickController.new
-log = Logger.new('housekeeper.log')
 
 get '/' do
   'Welcome to HouseKeeper!'
@@ -21,7 +20,7 @@ get '/list' do
   ts.list_devices.to_json
 end
 
-get '/detail/:id' do |id|
+get '/device/:id' do |id|
   content_type :json
   device = ts.show_device(id)
   if device.instance_of?(ErrorMessage)
@@ -30,30 +29,29 @@ get '/detail/:id' do |id|
   device.to_json
 end
 
-# TODO: don't use GET for these..
-get '/online/:id' do |id|
-  content_type :json
-  device = ts.online_device(id)
-  if device.instance_of?(ErrorMessage)
-    status device.error
+put '/device/:id' do |id|
+  begin
+    req = JSON.parse(request.body.read.to_s)
+    if req['action'] != nil
+      case req['action']
+        when 'online'
+          device = ts.online_device(id)
+        when 'offline'
+          device = ts.offline_device(id)
+        when 'toggle'
+          device = ts.toggle_device(id)
+        else
+          device = ErrorMessage.new(400, 'Unknown action "' + req['action'] + '"')
+      end
+      if device.instance_of?(ErrorMessage)
+        status device.error
+      end
+      return device.to_json
+    else
+      return ErrorMessage.new(400, 'Need action and id parameters').to_json
+    end
+  rescue Exception => e
+    status 400
+    'Malformed request'
   end
-  device.to_json
-end
-
-get '/offline/:id' do |id|
-  content_type :json
-  device = ts.offline_device(id)
-  if device.instance_of?(ErrorMessage)
-    status device.error
-  end
-  device.to_json
-end
-
-get '/toggle/:id' do |id|
-  content_type :json
-  device = ts.toggle_device(id)
-  if device.instance_of?(ErrorMessage)
-    status device.error
-  end
-  device.to_json
 end
