@@ -31,6 +31,7 @@ end
 
 # do an instant action, or if "timestamp" is given, set a scheduled task
 put '/device/:id' do |id|
+  content_type :json
   begin
     class Proc
       # redefine Proc to include name field
@@ -71,5 +72,6 @@ put '/device/:id' do |id|
 end
 
 get '/schedules' do
+  content_type :json
   ts.list_scheduled_tasks.to_json
 end
