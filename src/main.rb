@@ -15,7 +15,7 @@ get '/' do
   'Welcome to HouseKeeper!'
 end
 
-get '/list' do
+get '/devices' do
   content_type :json
   ts.list_devices.to_json
 end
@@ -29,29 +29,47 @@ get '/device/:id' do |id|
   device.to_json
 end
 
+# do an instant action, or if "timestamp" is given, set a scheduled task
 put '/device/:id' do |id|
   begin
+    class Proc
+      # redefine Proc to include name field
+      # (used for logging what type of task is scheduled)
+      attr_accessor :name
+    end
     req = JSON.parse(request.body.read.to_s)
     if req['action'] != nil
+      scheduled = req['timestamp'] != nil
       case req['action']
         when 'online'
-          device = ts.online_device(id)
+          action = Proc.new{ts.online_device(id)}
         when 'offline'
-          device = ts.offline_device(id)
+          action = Proc.new{ts.offline_device(id)}
         when 'toggle'
-          device = ts.toggle_device(id)
+          action = Proc.new{ts.toggle_device(id)}
         else
-          device = ErrorMessage.new(400, 'Unknown action "' + req['action'] + '"')
+          status 400
+          return ErrorMessage.new(400, 'Unknown action "' + req['action'] + '"')
+      end
+      action.name = req['action']
+      if scheduled
+        device = ts.schedule(ts.show_device(id), action, req['timestamp'])
+      else
+        device = action.call
       end
       if device.instance_of?(ErrorMessage)
         status device.error
       end
-      return device.to_json
+      device.to_json
     else
       return ErrorMessage.new(400, 'Need action and id parameters').to_json
     end
   rescue Exception => e
     status 400
-    'Malformed request'
+    e.backtrace
   end
+end
+
+get '/schedules' do
+  ts.list_scheduled_tasks.to_json
 end

@@ -1,4 +1,6 @@
 require 'logger'
+require 'rufus/scheduler'
+require 'chronic'
 
 module Logging
   def logger
@@ -11,12 +13,15 @@ module Logging
 end
 
 class ErrorMessage
+  include Logging
   attr_accessor :error, :message
 
   def initialize(error, message)
     @error = error
     @message = message
+    logger.error(message)
   end
+
   def to_json(*a)
     {
         :error => error,
@@ -101,7 +106,43 @@ class Device
   end
 end
 
+class Schedule
+  attr_accessor :device, :timestamp, :action
+
+  def initialize(device, timestamp, action)
+    @device = device
+    @timestamp = timestamp
+    @action = action
+  end
+
+  def to_json(*a)
+    {
+        :device => device,
+        :timestamp => timestamp,
+        :action => action,
+    }.to_json(*a)
+  end
+end
+
+module Scheduling
+  def scheduler
+    Scheduling.scheduler
+  end
+
+  def self.scheduler
+    @scheduler ||= Rufus::Scheduler.start_new
+  end
+end
+
 class TellStickController
+  include Scheduling
+  include Logging
+
+  attr_accessor :schedules
+  def initialize
+    @schedules = [] # holds scheduled tasks
+  end
+
   def list_devices
     output = %x{tdtool --list}
     lines = output.split("\n")
@@ -136,5 +177,22 @@ class TellStickController
   def toggle_device(id)
     device = list_devices[id]
     device != nil ? device.toggle : ErrorMessage.new(501, 'No such device: ' + id)
+  end
+
+  def schedule(device, action, timestamp)
+    parsed_timestamp = Chronic.parse(timestamp)
+    logger.info('Scheduling device ' + device.id + ' (' + device.name + ') for ' + action.name + ' at ' + parsed_timestamp.to_s)
+    schedule = Schedule.new(device, parsed_timestamp.to_s, action.name)
+    @schedules << schedule
+    scheduler.at parsed_timestamp do
+      logger.info('Running scheduled action...')
+      action.call
+      @schedules.delete(schedule)
+    end
+    schedule
+  end
+
+  def list_scheduled_tasks
+    @schedules
   end
 end
