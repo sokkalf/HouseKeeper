@@ -107,12 +107,17 @@ class Device
 end
 
 class Schedule
-  attr_accessor :device, :timestamp, :action
+  attr_accessor :device, :timestamp, :action, :job
 
-  def initialize(device, timestamp, action)
+  def initialize(device, timestamp, action, job)
     @device = device
     @timestamp = timestamp
     @action = action
+    @job = job
+  end
+
+  def find_by_job_id(job_id)
+
   end
 
   def to_json(*a)
@@ -120,6 +125,7 @@ class Schedule
         :device => device,
         :timestamp => timestamp,
         :action => action,
+        :job_id => job.job_id.to_s,
     }.to_json(*a)
   end
 end
@@ -134,13 +140,27 @@ module Scheduling
   end
 end
 
+class Hash
+  #pass single or array of keys, which will be removed, returning the remaining hash
+  def remove!(*keys)
+    keys.each{|key| self.delete(key) }
+    self
+  end
+
+  #non-destructive version
+  def remove(*keys)
+    self.dup.remove!(*keys)
+  end
+end
+
 class TellStickController
   include Scheduling
   include Logging
 
   attr_accessor :schedules
   def initialize
-    @schedules = [] # holds scheduled tasks
+    @schedules = Hash.new # holds scheduled tasks
+    #TODO: persist in SQLite database
   end
 
   def list_devices
@@ -161,35 +181,49 @@ class TellStickController
 
   def show_device(id)
     device = list_devices[id]
-    device != nil ? device : ErrorMessage.new(501, 'No such device: ' + id)
+    device != nil ? device : ErrorMessage.new(401, 'No such device: ' + id)
   end
 
   def online_device(id)
     device = list_devices[id]
-    device != nil ? device.online : ErrorMessage.new(501, 'No such device: ' + id)
+    device != nil ? device.online : ErrorMessage.new(401, 'No such device: ' + id)
   end
 
   def offline_device(id)
     device = list_devices[id]
-    device != nil ? device.offline : ErrorMessage.new(501, 'No such device: ' + id)
+    device != nil ? device.offline : ErrorMessage.new(401, 'No such device: ' + id)
   end
 
   def toggle_device(id)
     device = list_devices[id]
-    device != nil ? device.toggle : ErrorMessage.new(501, 'No such device: ' + id)
+    device != nil ? device.toggle : ErrorMessage.new(401, 'No such device: ' + id)
   end
 
   def schedule(device, action, timestamp)
     parsed_timestamp = Chronic.parse(timestamp)
     logger.info('Scheduling device ' + device.id + ' (' + device.name + ') for ' + action.name + ' at ' + parsed_timestamp.to_s)
-    schedule = Schedule.new(device, parsed_timestamp.to_s, action.name)
-    @schedules << schedule
-    scheduler.at parsed_timestamp do
+    schedule = Schedule.new(device, parsed_timestamp.to_s, action.name, nil)
+    #@schedules << schedule
+    job = scheduler.at parsed_timestamp do
       logger.info('Running scheduled action...')
       action.call
-      @schedules.delete(schedule)
+      @schedules.remove!(schedule.job.job_id)
     end
+    schedule.job = job
+    @schedules[job.job_id] = schedule
     schedule
+  end
+
+  def unschedule(job_id)
+    schedule = @schedules[job_id]
+    if schedule != nil
+      logger.info('Removing scheduled task ' + job_id + ' (' + schedule.action + ' device ' + schedule.device.name + ')')
+      scheduler.unschedule(job_id)
+      @schedules.remove!(job_id)
+      'Schedule ' + job_id + ' removed.'
+    else
+      ErrorMessage.new(401, 'No such schedule')
+    end
   end
 
   def list_scheduled_tasks

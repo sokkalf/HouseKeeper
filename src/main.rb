@@ -75,3 +75,13 @@ get '/schedules' do
   content_type :json
   ts.list_scheduled_tasks.to_json
 end
+
+get '/schedule/:id' do |id|
+  content_type :json
+  ts.list_scheduled_tasks[id].to_json
+end
+
+delete '/schedule/:id' do |id|
+  content_type :json
+  ts.unschedule(id).to_json
+end
