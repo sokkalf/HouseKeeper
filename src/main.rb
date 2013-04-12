@@ -83,5 +83,5 @@ end
 
 delete '/schedule/:id' do |id|
   content_type :json
-  ts.unschedule(id).to_json
+  ts.unschedule_by_uuid(id).to_json
 end

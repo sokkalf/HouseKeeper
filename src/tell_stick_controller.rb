@@ -1,6 +1,7 @@
 require 'logger'
 require 'rufus/scheduler'
 require 'chronic'
+require 'securerandom'
 
 module Logging
   def logger
@@ -107,25 +108,23 @@ class Device
 end
 
 class Schedule
-  attr_accessor :device, :timestamp, :action, :job
+  attr_accessor :device, :timestamp, :action, :job, :uuid
 
-  def initialize(device, timestamp, action, job)
+  def initialize(device, timestamp, action, job, uuid)
     @device = device
     @timestamp = timestamp
     @action = action
     @job = job
+    @uuid = uuid
   end
 
-  def find_by_job_id(job_id)
-
-  end
 
   def to_json(*a)
     {
         :device => device,
         :timestamp => timestamp,
         :action => action,
-        :job_id => job.job_id.to_s,
+        :uuid => uuid,
     }.to_json(*a)
   end
 end
@@ -160,6 +159,7 @@ class TellStickController
   attr_accessor :schedules
   def initialize
     @schedules = Hash.new # holds scheduled tasks
+    @schedules_uuid = Hash.new
     #TODO: persist in SQLite database
   end
 
@@ -202,31 +202,44 @@ class TellStickController
   def schedule(device, action, timestamp)
     parsed_timestamp = Chronic.parse(timestamp)
     logger.info('Scheduling device ' + device.id + ' (' + device.name + ') for ' + action.name + ' at ' + parsed_timestamp.to_s)
-    schedule = Schedule.new(device, parsed_timestamp.to_s, action.name, nil)
+    uuid = SecureRandom.uuid
+    schedule = Schedule.new(device, parsed_timestamp.to_s, action.name, nil, uuid)
     #@schedules << schedule
     job = scheduler.at parsed_timestamp do
       logger.info('Running scheduled action...')
       action.call
       @schedules.remove!(schedule.job.job_id)
+      @schedules_uuid.remove!(schedule.uuid)
     end
     schedule.job = job
     @schedules[job.job_id] = schedule
+    @schedules_uuid[schedule.uuid] = job.job_id
     schedule
   end
 
   def unschedule(job_id)
     schedule = @schedules[job_id]
     if schedule != nil
-      logger.info('Removing scheduled task ' + job_id + ' (' + schedule.action + ' device ' + schedule.device.name + ')')
+      logger.info('Removing scheduled task ' + schedule.uuid + ' (' + schedule.action + ' device ' + schedule.device.name + ')')
       scheduler.unschedule(job_id)
       @schedules.remove!(job_id)
-      'Schedule ' + job_id + ' removed.'
+      @schedules_uuid.remove!(schedule.uuid)
+      'Schedule ' + schedule.uuid + ' removed.'
     else
       ErrorMessage.new(401, 'No such schedule')
     end
   end
 
+  def unschedule_by_uuid(uuid)
+    job_id = @schedules_uuid[uuid]
+    unschedule(job_id)
+  end
+
   def list_scheduled_tasks
-    @schedules
+    sched_list = []
+    @schedules.each do |k, v|
+      sched_list << v
+    end
+    sched_list
   end
 end
