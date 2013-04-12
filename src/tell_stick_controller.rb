@@ -2,6 +2,7 @@ require 'logger'
 require 'rufus/scheduler'
 require 'chronic'
 require 'securerandom'
+require 'sqlite3'
 
 module Logging
   def logger
@@ -10,6 +11,42 @@ module Logging
 
   def self.logger
     @logger ||= Logger.new('housekeeper.log')
+  end
+end
+
+module Persistence
+  include Logging
+  def db
+    Persistence.db
+  end
+
+  def self.db
+    @db ||= SQLite3::Database.open 'housekeeper.db'
+  end
+
+  def create_table(table, col_names)
+    columns = []
+    col_names.each do |name|
+      columns << name + ' TEXT'
+    end
+    sql = "CREATE TABLE IF NOT EXISTS #{table} (#{columns.join(',')})"
+    db.execute sql
+  end
+
+  def persist(*a)
+    table = self.class.name
+    col_names = []
+    col_values = []
+    a.each do |k|
+      k.each do |key, value|
+        col_names << key.to_s
+        col_values << "'" + value + "'"
+      end
+    end
+
+    create_table(table, col_names)
+    sql = "INSERT INTO #{table}(#{col_names.join(',')}) VALUES(#{col_values.join(',')})"
+    db.execute sql
   end
 end
 
@@ -108,6 +145,7 @@ class Device
 end
 
 class Schedule
+  include Persistence
   attr_accessor :device, :timestamp, :action, :job, :uuid
 
   def initialize(device, timestamp, action, job, uuid)
@@ -126,6 +164,17 @@ class Schedule
         :action => action,
         :uuid => uuid,
     }.to_json(*a)
+  end
+
+  def save
+    persist(
+        {
+            :uuid => uuid,
+            :device_id => device.id,
+            :timestamp => timestamp,
+            :action => action,
+        }
+    )
   end
 end
 
@@ -214,6 +263,7 @@ class TellStickController
     schedule.job = job
     @schedules[job.job_id] = schedule
     @schedules_uuid[schedule.uuid] = job.job_id
+    schedule.save
     schedule
   end
 

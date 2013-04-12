@@ -68,6 +68,7 @@ put '/device/:id' do |id|
   rescue Exception => e
     status 400
     'Malformed request'
+    e.backtrace
   end
 end
 
