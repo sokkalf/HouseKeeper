@@ -51,6 +51,7 @@ module Persistence
 
     create_table(table, col_names)
     sql = "INSERT INTO #{table}(#{col_names.join(',')}) VALUES(#{col_values.join(',')})"
+    logger.debug sql
     begin
       db.execute sql
     rescue SQLite3::SQLException => e
@@ -309,7 +310,11 @@ class TellStickController
   def initialize
     @schedules = Hash.new # holds scheduled tasks
     @schedules_uuid = Hash.new
-    #TODO: persist in SQLite database
+    scheduler.every '5m' do
+      @devices = Device.find_all_devices
+      logger.debug 'Refreshing device cache'
+    end
+
     Schedule.find_all_schedules.each do |sched|
       if Chronic.parse(sched.timestamp) > Time.now
         case sched.action
@@ -334,7 +339,7 @@ class TellStickController
   end
 
   def list_devices
-    Device.find_all_devices
+    @devices != nil ? @devices : @devices = Device.find_all_devices
   end
 
   def show_device(id)
@@ -362,7 +367,6 @@ class TellStickController
     logger.info('Scheduling device ' + device.id + ' (' + device.name + ') for ' + action.name + ' at ' + parsed_timestamp.to_s)
     uuid = uuid != nil ? uuid : SecureRandom.uuid
     schedule = Schedule.new(device, parsed_timestamp.to_s, action.name, nil, uuid)
-    #@schedules << schedule
     job = scheduler.at parsed_timestamp do
       logger.info('Running scheduled action...')
       action.call
