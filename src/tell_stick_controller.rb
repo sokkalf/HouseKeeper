@@ -51,7 +51,11 @@ module Persistence
 
     create_table(table, col_names)
     sql = "INSERT INTO #{table}(#{col_names.join(',')}) VALUES(#{col_values.join(',')})"
-    db.execute sql
+    begin
+      db.execute sql
+    rescue SQLite3::SQLException => e
+      logger.error 'Error inserting row in database'
+    end
   end
 
   module FindMethods
@@ -60,23 +64,35 @@ module Persistence
     def find_all
       table = self.inspect
       sql = "SELECT * FROM #{table}"
-      stm = db.prepare sql
-      stm.execute
+      begin
+        stm = db.prepare sql
+        stm.execute
+      rescue SQLite3::SQLException => e
+        nil
+      end
     end
 
     def find_by_column(col, value)
       table = self.inspect
       sql = "SELECT * FROM #{table} WHERE #{col} = '#{value}'"
       logger.debug sql
-      stm = db.prepare sql
-      stm.execute
+      begin
+        stm = db.prepare sql
+        stm.execute
+      rescue SQLite3::SQLException => e
+        nil
+      end
     end
 
     def delete_by_column(col, value)
       table = self.inspect
       sql = "DELETE FROM #{table} WHERE #{col} = '#{value}'"
       logger.debug sql
-      db.execute sql
+      begin
+        db.execute sql
+      rescue SQLite3::SQLException => e
+        nil
+      end
     end
   end
 end
@@ -229,6 +245,9 @@ class Schedule
 
   def self.find_all_schedules
     schedule_rows = self.find_all
+    if nil == schedule_rows
+      return []
+    end
     schedules = []
     schedule_rows.each do |uuid, device_id, timestamp, action|
       device = Device.find_by_id(device_id)
@@ -239,6 +258,9 @@ class Schedule
 
   def self.find_by_uuid(uuid)
     schedule_rows = self.find_by_column(:uuid, uuid)
+    if nil == schedule_rows
+      return nil
+    end
     schedules = []
     schedule_rows.each do |uuid, device_id, timestamp, action|
       device = Device.find_by_id(device_id)
@@ -346,6 +368,7 @@ class TellStickController
       action.call
       @schedules.remove!(schedule.job.job_id)
       @schedules_uuid.remove!(schedule.uuid)
+      Schedule.delete_by_uuid(schedule.uuid)
     end
     schedule.job = job
     @schedules[job.job_id] = schedule
