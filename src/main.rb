@@ -2,7 +2,11 @@ $LOAD_PATH.unshift File.dirname(__FILE__)
 require 'sinatra'
 require 'json'
 
+require 'util/proc'
 require 'tell_stick_controller'
+require 'errormessage'
+require 'device'
+require 'schedule'
 
 configure do
   set :bind, '0.0.0.0'
@@ -33,11 +37,6 @@ end
 put '/device/:id' do |id|
   content_type :json
   begin
-    class Proc
-      # redefine Proc to include name field
-      # (used for logging what type of task is scheduled)
-      attr_accessor :name
-    end
     req = JSON.parse(request.body.read.to_s)
     if req['action'] != nil
       scheduled = req['timestamp'] != nil
@@ -68,7 +67,6 @@ put '/device/:id' do |id|
   rescue Exception => e
     status 400
     'Malformed request'
-    e.backtrace
   end
 end
 
