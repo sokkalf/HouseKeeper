@@ -54,7 +54,7 @@ put '/device/:id' do |id|
       end
       action.name = req['action']
       if scheduled
-        device = ts.schedule(ts.show_device(id), action, req['timestamp'])
+        device = ts.schedule(ts.show_device(id), action, req['timestamp'], nil)
       else
         device = action.call
       end
