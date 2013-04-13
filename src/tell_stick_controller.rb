@@ -10,7 +10,7 @@ require 'util/hash'
 require 'errormessage'
 require 'device'
 require 'schedule'
-
+require 'temperature'
 
 class TellStickController
   include Scheduling
@@ -23,6 +23,11 @@ class TellStickController
     scheduler.every '5m' do
       @devices = Device.find_all_devices
       logger.debug 'Refreshing device cache'
+    end
+
+    scheduler.every '1m' do
+      temperature = YrTemperature.get_reading
+      temperature.save
     end
 
     Schedule.find_all_schedules.each do |sched|

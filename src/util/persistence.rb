@@ -1,4 +1,5 @@
 require 'sqlite3'
+$LOAD_PATH.unshift File.dirname(__FILE__)
 require 'logging'
 
 module Persistence

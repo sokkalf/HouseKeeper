@@ -7,6 +7,7 @@ require 'tell_stick_controller'
 require 'errormessage'
 require 'device'
 require 'schedule'
+require 'temperature'
 
 configure do
   set :bind, '0.0.0.0'
@@ -83,4 +84,9 @@ end
 delete '/schedule/:id' do |id|
   content_type :json
   ts.unschedule_by_uuid(id).to_json
+end
+
+get '/temperature' do
+  content_type :json
+  YrTemperature.get_reading.to_json
 end
