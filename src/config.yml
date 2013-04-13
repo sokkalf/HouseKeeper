@@ -1,0 +1,4 @@
+yr_url: 'http://www.yr.no/sted/Norge/postnummer/0456/varsel.xml'
+yr_weatherstation: 'Oslo (Blindern)'
+yr_refresh: '1h'
+device_cache_refresh: '5m'

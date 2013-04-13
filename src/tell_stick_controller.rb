@@ -1,5 +1,6 @@
 require 'chronic'
 require 'securerandom'
+require 'yaml'
 
 require 'util/logging'
 require 'util/persistence'
@@ -18,15 +19,20 @@ class TellStickController
 
   attr_accessor :schedules
   def initialize
+    logger.info 'Starting up'
+    config = YAML.load_file('config.yml')
+    device_cache_refresh = config['device_cache_refresh'] ||= '5m'
+    logger.debug 'Refreshing device cache every ' + device_cache_refresh
     @schedules = Hash.new # holds scheduled tasks
     @schedules_uuid = Hash.new
-    scheduler.every '5m' do
+    scheduler.every device_cache_refresh do
       @devices = Device.find_all_devices
       logger.debug 'Refreshing device cache'
     end
 
     # Read temperature from Yr every hour
-    scheduler.every '1h' do
+    yr_refresh = config['yr_refresh'] ||= '1h'
+    scheduler.every yr_refresh do
       temperature = YrTemperature.get_reading
       temperature.save
     end
