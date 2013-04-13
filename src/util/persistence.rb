@@ -2,6 +2,8 @@ require 'sqlite3'
 $LOAD_PATH.unshift File.dirname(__FILE__)
 require 'logging'
 
+# super simple "Persistence framework"
+# does not support other data types than strings, foreign keys, etc
 module Persistence
   include Logging
 

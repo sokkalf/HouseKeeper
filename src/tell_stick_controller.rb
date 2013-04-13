@@ -25,7 +25,8 @@ class TellStickController
       logger.debug 'Refreshing device cache'
     end
 
-    scheduler.every '1m' do
+    # Read temperature from Yr every hour
+    scheduler.every '1h' do
       temperature = YrTemperature.get_reading
       temperature.save
     end
