@@ -102,7 +102,7 @@ class TellStickController
     schedule.job = job
     @schedules[job.job_id] = schedule
     @schedules_uuid[schedule.uuid] = job.job_id
-    if Schedule.find_by_uuid(schedule.uuid) == nil
+    if Schedule.find_by_uuid(schedule.uuid) == nil # don't re-save when re-scheduling events stored in database
       schedule.save
     end
     schedule
