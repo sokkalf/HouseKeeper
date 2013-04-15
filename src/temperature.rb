@@ -108,7 +108,7 @@ class YrTemperature < Temperature
     document = Nokogiri::XML(open(url))
     temperature_reading = document.xpath("//weatherdata/observations/weatherstation[@name='#{weatherstation}']/temperature/@value")
     timestamp = document.xpath("//weatherdata/observations/weatherstation[@name='#{weatherstation}']/temperature/@time")
-    Temperature.new(temperature_reading.to_s, @source, Chronic.parse(timestamp.to_s).localtime.to_s)
+    Temperature.new(temperature_reading.to_s.to_f, @source, Chronic.parse(timestamp.to_s).localtime.to_s)
   end
 
   def self.find_all
