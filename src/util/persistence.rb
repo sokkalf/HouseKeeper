@@ -8,8 +8,11 @@ require 'logging'
 module Persistence
   include Logging
 
+  class << self; attr_accessor :tables end
+
   def self.included(o)
     o.extend(FindMethods)
+    Persistence.tables = Hash.new
   end
 
   def db
@@ -35,7 +38,12 @@ module Persistence
     end
     sql = "CREATE TABLE IF NOT EXISTS #{table} (#{columns.join(',')})"
     logger.debug sql
-    db.execute sql
+    begin
+      db.execute sql
+      Persistence.tables[table] = true
+    rescue SQLite3::SQLException => e
+      nil
+    end
   end
 
   def persist(*a)
@@ -58,7 +66,10 @@ module Persistence
       end
     end
 
-    create_table(table, col_datatypes)
+    unless Persistence.tables[table]
+      create_table(table, col_datatypes)
+    end
+
     sql = "INSERT INTO #{table}(#{col_names.join(',')}) VALUES(#{col_values.join(',')})"
     logger.debug sql
     begin
@@ -76,8 +87,10 @@ module Persistence
       sql = "SELECT * FROM #{table}"
       begin
         stm = db.prepare sql
+        Persistence.tables[table] = true
         stm.execute
       rescue SQLite3::SQLException => e
+        Persistence.tables[table] = false
         nil
       end
     end
@@ -88,8 +101,10 @@ module Persistence
       logger.debug sql
       begin
         stm = db.prepare sql
+        Persistence.tables[table] = true
         stm.execute
       rescue SQLite3::SQLException => e
+        Persistence.tables[table] = false
         nil
       end
     end
@@ -99,8 +114,10 @@ module Persistence
       sql = "DELETE FROM #{table} WHERE #{col} = '#{value}'"
       logger.debug sql
       begin
+        Persistence.tables[table] = true
         db.execute sql
       rescue SQLite3::SQLException => e
+        Persistence.tables[table] = false
         nil
       end
     end
