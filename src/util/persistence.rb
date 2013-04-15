@@ -3,7 +3,8 @@ $LOAD_PATH.unshift File.dirname(__FILE__)
 require 'logging'
 
 # super simple "Persistence framework"
-# does not support other data types than strings, foreign keys, etc
+# supports strings, floats, integers
+# does not support foreign keys, etc
 module Persistence
   include Logging
 
@@ -19,12 +20,21 @@ module Persistence
     @db ||= SQLite3::Database.open 'housekeeper.db'
   end
 
-  def create_table(table, col_names)
+  def create_table(table, names_datatypes)
     columns = []
-    col_names.each do |name|
-      columns << name + ' TEXT'
+    names_datatypes.each do |name, type|
+      case type
+        when 'Fixnum' || 'Integer'
+          sql_type = 'INTEGER'
+        when 'Float'
+          sql_type = 'REAL'
+        else
+          sql_type = 'TEXT'
+      end
+      columns << name + ' ' + sql_type
     end
     sql = "CREATE TABLE IF NOT EXISTS #{table} (#{columns.join(',')})"
+    logger.debug sql
     db.execute sql
   end
 
@@ -32,14 +42,23 @@ module Persistence
     table = self.class.name
     col_names = []
     col_values = []
+    col_datatypes = Hash.new
     a.each do |k|
       k.each do |key, value|
         col_names << key.to_s
-        col_values << "'" + value + "'"
+        col_datatypes[key.to_s] = value.class.to_s
+        case value.class.to_s
+          when 'Fixnum' || 'Integer'
+            col_values << value
+          when 'Float'
+            col_values << value
+          else
+            col_values << "'" + value + "'"
+        end
       end
     end
 
-    create_table(table, col_names)
+    create_table(table, col_datatypes)
     sql = "INSERT INTO #{table}(#{col_names.join(',')}) VALUES(#{col_values.join(',')})"
     logger.debug sql
     begin
