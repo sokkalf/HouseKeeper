@@ -29,7 +29,7 @@ class PersistenceTest < Test::Unit::TestCase
 
   def test_b_find
     a = Temperature.find_by_source('test')
-    assert_equal(5, a.size, 'Expected one result')
+    assert_equal(5, a.size, 'Expected five results')
   end
 
   def test_c_find_highest
@@ -43,7 +43,8 @@ class PersistenceTest < Test::Unit::TestCase
   end
 
   def test_e_delete
-    Temperature.delete_by_column(:source, 'test')
+    a = Temperature.delete_by_column(:source, 'test')
+    assert_not_nil(a)
   end
 
   def test_f_find
