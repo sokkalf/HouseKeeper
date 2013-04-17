@@ -34,19 +34,7 @@ get '/device/:id' do |id|
   device.to_json
 end
 
-def get_action(ts, request, id)
-  case request
-    when 'online'
-      return Proc.new{ts.online_device(id)}
-    when 'offline'
-      return Proc.new{ts.offline_device(id)}
-    when 'toggle'
-      return Proc.new{ts.toggle_device(id)}
-    else
-      status 400
-      return ErrorMessage.new(400, 'Unknown action "' + req['action'] + '"')
-    end
-end
+
 
 # do an instant action, or if "timestamp" is given, set a scheduled task
 put '/device/:id' do |id|
@@ -55,7 +43,7 @@ put '/device/:id' do |id|
     req = JSON.parse(request.body.read.to_s)
     if req['action'] != nil
       scheduled = req['timestamp'] != nil
-      action = get_action(ts, req['action'], id)
+      action = ts.get_action(req['action'], id)
       action.name = req['action']
       if scheduled
         device = ts.schedule(ts.show_device(id), action, req['timestamp'], nil)
@@ -97,7 +85,7 @@ put '/schedule/' do
     if req['action'] != nil && req['timestamp'] != nil && req['device'] != nil
       id = req['device']
       recurring = req['recurring'] != nil
-      action = get_action(ts, req['action'], id)
+      action = ts.get_action(req['action'], id)
       action.name = req['action']
       if recurring
         device = ts.schedule_recurring(ts.show_device(id), action, req['timestamp'], nil)

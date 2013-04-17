@@ -38,26 +38,45 @@ class TellStickController
     end
 
     Schedule.find_all_schedules.each do |sched|
-      if Chronic.parse(sched.timestamp) > Time.now
-        case sched.action
-          when 'online'
-            action = Proc.new{online_device(sched.device.id)}
-          when 'offline'
-            action = Proc.new{offline_device(sched.device.id)}
-          when 'toggle'
-            action = Proc.new{toggle_device(sched.device.id)}
-          else
-            action = nil
+      if sched.type != 'recurring'
+        if Chronic.parse(sched.timestamp) > Time.now
+            action = self.get_action(sched.action, sched.device.id)
+            unless action.instance_of?(Proc)
+              action = nil
+            end
+            if action != nil
+              action.name = sched.action
+              schedule(sched.device, action, sched.timestamp, sched.uuid)
+            end
+        else
+          Schedule.delete_by_uuid(sched.uuid)
+        end
+      else
+        action = self.get_action(sched.action, sched.device.id)
+        unless action.instance_of?(Proc)
+          action = nil
         end
         if action != nil
           action.name = sched.action
-          schedule(sched.device, action, sched.timestamp, sched.uuid)
+          schedule_recurring(sched.device, action, sched.timestamp, sched.uuid)
         end
-      else
-        Schedule.delete_by_uuid(sched.uuid)
       end
     end
 
+  end
+
+  def get_action(request, id)
+    case request
+      when 'online'
+        return Proc.new{self.online_device(id)}
+      when 'offline'
+        return Proc.new{self.offline_device(id)}
+      when 'toggle'
+        return Proc.new{self.toggle_device(id)}
+      else
+        status 400
+        return ErrorMessage.new(400, 'Unknown action "' + request + '"')
+      end
   end
 
   def list_devices
