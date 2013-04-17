@@ -34,6 +34,8 @@ get '/device/:id' do |id|
   device.to_json
 end
 
+
+
 # do an instant action, or if "timestamp" is given, set a scheduled task
 put '/device/:id' do |id|
   content_type :json
@@ -41,17 +43,7 @@ put '/device/:id' do |id|
     req = JSON.parse(request.body.read.to_s)
     if req['action'] != nil
       scheduled = req['timestamp'] != nil
-      case req['action']
-        when 'online'
-          action = Proc.new{ts.online_device(id)}
-        when 'offline'
-          action = Proc.new{ts.offline_device(id)}
-        when 'toggle'
-          action = Proc.new{ts.toggle_device(id)}
-        else
-          status 400
-          return ErrorMessage.new(400, 'Unknown action "' + req['action'] + '"')
-      end
+      action = ts.get_action(req['action'], id)
       action.name = req['action']
       if scheduled
         device = ts.schedule(ts.show_device(id), action, req['timestamp'], nil)
@@ -84,6 +76,33 @@ end
 delete '/schedule/:id' do |id|
   content_type :json
   ts.unschedule_by_uuid(id).to_json
+end
+
+put '/schedule/' do
+  content_type :json
+  begin
+    req = JSON.parse(request.body.read.to_s)
+    if req['action'] != nil && req['timestamp'] != nil && req['device'] != nil
+      id = req['device']
+      recurring = req['recurring'] != nil
+      action = ts.get_action(req['action'], id)
+      action.name = req['action']
+      if recurring
+        device = ts.schedule_recurring(ts.show_device(id), action, req['timestamp'], nil)
+      else
+        device = ts.schedule(ts.show_device(id), action, req['timestamp'], nil)
+      end
+      if device.instance_of?(ErrorMessage)
+        status device.error
+      end
+      device.to_json
+    else
+      return ErrorMessage.new(400, 'Need action and id parameters').to_json
+    end
+  rescue Exception => e
+    status 400
+    'Malformed request'
+  end
 end
 
 get '/temperature' do

@@ -38,26 +38,45 @@ class TellStickController
     end
 
     Schedule.find_all_schedules.each do |sched|
-      if Chronic.parse(sched.timestamp) > Time.now
-        case sched.action
-          when 'online'
-            action = Proc.new{online_device(sched.device.id)}
-          when 'offline'
-            action = Proc.new{offline_device(sched.device.id)}
-          when 'toggle'
-            action = Proc.new{toggle_device(sched.device.id)}
-          else
-            action = nil
+      if sched.type != 'recurring'
+        if Chronic.parse(sched.timestamp) > Time.now
+            action = self.get_action(sched.action, sched.device.id)
+            unless action.instance_of?(Proc)
+              action = nil
+            end
+            if action != nil
+              action.name = sched.action
+              schedule(sched.device, action, sched.timestamp, sched.uuid)
+            end
+        else
+          Schedule.delete_by_uuid(sched.uuid)
+        end
+      else
+        action = self.get_action(sched.action, sched.device.id)
+        unless action.instance_of?(Proc)
+          action = nil
         end
         if action != nil
           action.name = sched.action
-          schedule(sched.device, action, sched.timestamp, sched.uuid)
+          schedule_recurring(sched.device, action, sched.timestamp, sched.uuid)
         end
-      else
-        Schedule.delete_by_uuid(sched.uuid)
       end
     end
 
+  end
+
+  def get_action(request, id)
+    case request
+      when 'online'
+        return Proc.new{self.online_device(id)}
+      when 'offline'
+        return Proc.new{self.offline_device(id)}
+      when 'toggle'
+        return Proc.new{self.toggle_device(id)}
+      else
+        status 400
+        return ErrorMessage.new(400, 'Unknown action "' + request + '"')
+      end
   end
 
   def list_devices
@@ -91,13 +110,33 @@ class TellStickController
     parsed_timestamp = Chronic.parse(timestamp)
     logger.info('Scheduling device ' + device.id + ' (' + device.name + ') for ' + action.name + ' at ' + parsed_timestamp.to_s)
     uuid = uuid != nil ? uuid : SecureRandom.uuid
-    schedule = Schedule.new(device, parsed_timestamp.to_s, action.name, nil, uuid)
+    schedule = Schedule.new(device, parsed_timestamp.to_s, action.name, nil, uuid, 'regular')
     job = scheduler.at parsed_timestamp do
       logger.info('Running scheduled action...')
       action.call
       @schedules.remove!(schedule.job.job_id)
       @schedules_uuid.remove!(schedule.uuid)
       Schedule.delete_by_uuid(schedule.uuid)
+    end
+    schedule.job = job
+    @schedules[job.job_id] = schedule
+    @schedules_uuid[schedule.uuid] = job.job_id
+    if Schedule.find_by_uuid(schedule.uuid) == nil # don't re-save when re-scheduling events stored in database
+      schedule.save
+    end
+    schedule
+  end
+
+  def schedule_recurring(device, action, timestamp, uuid)
+    if !device.instance_of?(Device)
+      return device
+    end
+    logger.info('Scheduling recurring task: device ' + device.id + ' (' + device.name + ') for ' + action.name + ' every ' + timestamp.to_s)
+    uuid = uuid != nil ? uuid : SecureRandom.uuid
+    schedule = Schedule.new(device, timestamp.to_s, action.name, nil, uuid, 'recurring')
+    job = scheduler.every timestamp do
+      logger.info('Running recurring action...')
+      action.call
     end
     schedule.job = job
     @schedules[job.job_id] = schedule

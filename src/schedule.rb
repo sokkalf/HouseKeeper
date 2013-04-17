@@ -2,14 +2,15 @@ require 'util/persistence'
 
 class Schedule
   include Persistence
-  attr_accessor :device, :timestamp, :action, :job, :uuid
+  attr_accessor :device, :timestamp, :action, :job, :uuid, :type
 
-  def initialize(device, timestamp, action, job, uuid)
+  def initialize(device, timestamp, action, job, uuid, type)
     @device = device
     @timestamp = timestamp
     @action = action
     @job = job
     @uuid = uuid
+    @type = type
   end
 
   def to_json(*a)
@@ -18,6 +19,7 @@ class Schedule
         :timestamp => timestamp,
         :action => action,
         :uuid => uuid,
+        :type => type,
     }.to_json(*a)
   end
 
@@ -28,6 +30,7 @@ class Schedule
             :device_id => device.id,
             :timestamp => timestamp,
             :action => action,
+            :type => type,
         }
     )
   end
@@ -38,9 +41,9 @@ class Schedule
       return []
     end
     schedules = []
-    schedule_rows.each do |uuid, device_id, timestamp, action|
+    schedule_rows.each do |uuid, device_id, timestamp, action, type|
       device = Device.find_by_id(device_id)
-      schedules << Schedule.new(device, timestamp, action, nil, uuid)
+      schedules << Schedule.new(device, timestamp, action, nil, uuid, type)
     end
     schedules
   end
@@ -51,9 +54,9 @@ class Schedule
       return nil
     end
     schedules = []
-    schedule_rows.each do |uuid, device_id, timestamp, action|
+    schedule_rows.each do |uuid, device_id, timestamp, action, type|
       device = Device.find_by_id(device_id)
-      schedules << Schedule.new(device, timestamp, action, nil, uuid)
+      schedules << Schedule.new(device, timestamp, action, nil, uuid, type)
     end
     schedules[0]
   end
