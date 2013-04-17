@@ -122,10 +122,11 @@ class InsideTemperature < Temperature
 
   def self.get_reading
     begin
-      Temper2::read_inner_sensor
+      temperature_reading = Temper2::read_inner_sensor
     rescue Exception => e
-      nil
+      temperature_reading = nil
     end
+    Temperature.new(temperature_reading, @source, Chronic.parse(Time.now.to_s).localtime.to_s)
   end
 
   def self.find_all
@@ -138,10 +139,11 @@ class OutsideTemperature < Temperature
 
   def self.get_reading
     begin
-      Temper2::read_outer_sensor
+      temperature_reading = Temper2::read_outer_sensor
     rescue Exception => e
-      nil
+      temperature_reading = nil
     end
+    Temperature.new(temperature_reading, @source, Chronic.parse(Time.now.to_s).localtime.to_s)
   end
 
   def self.find_all
