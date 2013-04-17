@@ -8,6 +8,8 @@ $LOAD_PATH.unshift File.dirname(__FILE__)
 require 'util/logging'
 require 'util/persistence'
 
+require 'errormessage'
+
 class Temperature
   include Logging
   include Persistence
@@ -123,10 +125,10 @@ class InsideTemperature < Temperature
   def self.get_reading
     begin
       temperature_reading = Temper2::read_inner_sensor
+      Temperature.new(temperature_reading, @source, Chronic.parse(Time.now.to_s).localtime.to_s)
     rescue Exception => e
-      temperature_reading = nil
+      ErrorMessage.new(400, "Can't get temperature reading")
     end
-    Temperature.new(temperature_reading, @source, Chronic.parse(Time.now.to_s).localtime.to_s)
   end
 
   def self.find_all
@@ -140,10 +142,10 @@ class OutsideTemperature < Temperature
   def self.get_reading
     begin
       temperature_reading = Temper2::read_outer_sensor
+      Temperature.new(temperature_reading, @source, Chronic.parse(Time.now.to_s).localtime.to_s)
     rescue Exception => e
-      temperature_reading = nil
+      ErrorMessage.new(400, "Can't get temperature reading")
     end
-    Temperature.new(temperature_reading, @source, Chronic.parse(Time.now.to_s).localtime.to_s)
   end
 
   def self.find_all
