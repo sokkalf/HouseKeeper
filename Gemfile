@@ -6,6 +6,7 @@ gem 'rufus-scheduler'
 gem 'chronic'
 gem 'sqlite3'
 gem 'nokogiri'
+gem 'temper2-ruby'
 
 group :test do
     if RUBY_PLATFORM =~ /(win32|w32)/

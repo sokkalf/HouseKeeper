@@ -107,5 +107,5 @@ end
 
 get '/temperature' do
   content_type :json
-  YrTemperature.get_reading.to_json
+  InsideTemperature.get_reading.to_json
 end

@@ -2,6 +2,7 @@ require 'nokogiri'
 require 'open-uri'
 require 'chronic'
 require 'yaml'
+require 'temper2-ruby/temper2'
 
 $LOAD_PATH.unshift File.dirname(__FILE__)
 require 'util/logging'
@@ -109,6 +110,38 @@ class YrTemperature < Temperature
     temperature_reading = document.xpath("//weatherdata/observations/weatherstation[@name='#{weatherstation}']/temperature/@value")
     timestamp = document.xpath("//weatherdata/observations/weatherstation[@name='#{weatherstation}']/temperature/@time")
     Temperature.new(temperature_reading.to_s.to_f, @source, Chronic.parse(timestamp.to_s).localtime.to_s)
+  end
+
+  def self.find_all
+    find_by_source(@source)
+  end
+end
+
+class InsideTemperature < Temperature
+  @source = 'inside'
+
+  def self.get_reading
+    begin
+      Temper2::read_inner_sensor
+    rescue Exception => e
+      nil
+    end
+  end
+
+  def self.find_all
+    find_by_source(@source)
+  end
+end
+
+class OutsideTemperature < Temperature
+  @source = 'outside'
+
+  def self.get_reading
+    begin
+      Temper2::read_outer_sensor
+    rescue Exception => e
+      nil
+    end
   end
 
   def self.find_all
