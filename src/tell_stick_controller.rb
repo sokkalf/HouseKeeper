@@ -37,6 +37,24 @@ class TellStickController
       temperature.save
     end
 
+    inside_temperature_refresh = config['inside_temperature_refresh'] ||= '10m'
+    outside_temperature_refresh = config['outside_temperature_refresh'] ||= '10m'
+
+    scheduler.every inside_temperature_refresh do
+      temperature = InsideTemperature.get_reading
+      unless temperature.instance_of?(ErrorMessage)
+        temperature.save
+      end
+    end
+
+    scheduler.every outside_temperature_refresh do
+      temperature = OutsideTemperature.get_reading
+      unless temperature.instance_of?(ErrorMessage)
+        temperature.save
+      end
+    end
+
+
     Schedule.find_all_schedules.each do |sched|
       if sched.type != 'recurring'
         if Chronic.parse(sched.timestamp) > Time.now
