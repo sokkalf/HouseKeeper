@@ -7,6 +7,7 @@ require 'temper2-ruby/temper2'
 $LOAD_PATH.unshift File.dirname(__FILE__)
 require 'util/logging'
 require 'util/persistence'
+require 'util/scheduling'
 
 require 'errormessage'
 
@@ -105,6 +106,7 @@ class YrTemperature < Temperature
   @source = 'yr'
 
   def self.get_reading
+    logger.debug 'Fetching temperature reading from Yr'
     config = YAML.load_file('config.yml')
     url = config['yr_url']
     weatherstation = config['yr_weatherstation']
@@ -116,6 +118,17 @@ class YrTemperature < Temperature
 
   def self.find_all
     find_by_source(@source)
+  end
+end
+
+class CachedYrTemperature < YrTemperature
+  include Scheduling
+  def self.get_reading
+    @yrtemperature ||= YrTemperature.get_reading
+  end
+
+  def self.set_temperature(temperature)
+    @yrtemperature = temperature
   end
 end
 
@@ -150,5 +163,20 @@ class OutsideTemperature < Temperature
 
   def self.find_all
     find_by_source(@source)
+  end
+end
+
+class TemperatureSensors
+  attr_accessor :sensors
+
+  def initialize
+    @sensors = []
+    @sensors << CachedYrTemperature
+    @sensors << OutsideTemperature
+    @sensors << InsideTemperature
+  end
+
+  def get_sensors
+    @sensors
   end
 end

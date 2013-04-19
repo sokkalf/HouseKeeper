@@ -107,5 +107,12 @@ end
 
 get '/temperature' do
   content_type :json
-  InsideTemperature.get_reading.to_json
+  temperatures = Hash.new
+  TemperatureSensors.new.get_sensors.each do |sensor|
+    temperature = sensor.get_reading
+    if temperature.instance_of?(Temperature)
+      temperatures[temperature.source] = temperature.temperature_reading
+    end
+  end
+  temperatures.to_json
 end

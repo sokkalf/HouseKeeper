@@ -34,6 +34,7 @@ class TellStickController
     yr_refresh = config['yr_refresh'] ||= '1h'
     scheduler.every yr_refresh do
       temperature = YrTemperature.get_reading
+      CachedYrTemperature.set_temperature(temperature)
       temperature.save
     end
 
