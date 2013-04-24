@@ -65,25 +65,22 @@ class Temperature
   def self.find_highest(limit)
     sql = "SELECT * from #{self.inspect} ORDER BY temperature_reading DESC LIMIT #{limit}"
     logger.debug sql
-    begin
-      stm = db.prepare sql
-      rs = stm.execute
-    rescue SQLite3::SQLException => e
-      puts e.backtrace
-      rs = nil
-    end
-    if rs != nil
-      temperatures = []
-      rs.each do |temperature_reading, source, timestamp|
-        temperatures << Temperature.new(temperature_reading, source, timestamp)
-      end
-      temperatures
-    end
+    self.select sql
   end
 
   def self.find_lowest(limit)
     sql = "SELECT * from #{self.inspect} ORDER BY temperature_reading ASC LIMIT #{limit}"
     logger.debug sql
+    self.select sql
+  end
+
+  def self.find_latest_by_source(source, limit)
+    sql = "SELECT * from #{self.inspect} WHERE source = '#{source}' ORDER BY timestamp DESC LIMIT #{limit}"
+    logger.debug sql
+    self.select sql
+  end
+
+  def self.select(sql)
     begin
       stm = db.prepare sql
       rs = stm.execute
@@ -99,7 +96,6 @@ class Temperature
       temperatures
     end
   end
-
 end
 
 class YrTemperature < Temperature
