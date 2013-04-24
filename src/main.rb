@@ -120,5 +120,7 @@ end
 get '/temperature/latest/:source' do |source|
   content_type :json
   temperatures = Temperature.find_latest_by_source(source, 5).reverse
-  temperatures.to_json
+  result = Hash.new
+  result['latest_temperatures'] = temperatures
+  result.to_json
 end
