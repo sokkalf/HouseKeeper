@@ -156,8 +156,8 @@ class TemperatureSensors
   def initialize
     @sensors = []
     @sensors << CachedYrTemperature
-    #@sensors << OutsideTemperature
-    #@sensors << InsideTemperature
+    @sensors << OutsideTemperature
+    @sensors << InsideTemperature
   end
 
   def get_sensors
