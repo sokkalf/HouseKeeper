@@ -7,6 +7,7 @@ gem 'chronic'
 gem 'sqlite3'
 gem 'nokogiri'
 gem 'temper2-ruby'
+gem 'rest-client'
 
 group :test do
     if RUBY_PLATFORM =~ /(win32|w32)/

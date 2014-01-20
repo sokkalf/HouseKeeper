@@ -7,6 +7,7 @@ require 'util/persistence'
 require 'util/scheduling'
 require 'util/proc'
 require 'util/hash'
+require 'util/datashipper'
 
 require 'errormessage'
 require 'device'
@@ -32,10 +33,28 @@ class TellStickController
 
     # Read temperature from Yr every hour
     yr_refresh = config['yr_refresh'] ||= '1h'
+    logger.debug "Refreshing Yr data every #{yr_refresh}"
     scheduler.every yr_refresh do
       temperature = YrTemperature.get_reading
       CachedYrTemperature.set_temperature(temperature)
       temperature.save
+    end
+
+    datashipper_refresh = config['datashipper_refresh'] ||= '30m'
+    datashipper_url = config['datashipper_url'] ||= 'http://localhost:5001/store'
+    logger.debug "Shipping data to secondary storage every #{datashipper_refresh}"
+    scheduler.every datashipper_refresh do
+      logger.debug 'Fetching temperature data for shipping to external storage'
+      temperatures = []
+      all_temps = Temperature.find_all
+      if all_temps
+        all_temps.each do |temperature_reading, source, timestamp|
+          temperatures << Temperature.new(temperature_reading, source, timestamp)
+        end
+        DataShipper.ship_data(datashipper_url, temperatures)
+      else
+        logger.debug 'Skipping  - No data.'
+      end
     end
 
     inside_temperature_refresh = config['inside_temperature_refresh'] ||= '10m'
@@ -123,7 +142,7 @@ class TellStickController
   end
 
   def schedule(device, action, timestamp, uuid)
-    if !device.instance_of?(Device)
+    unless device.instance_of?(Device)
       return device
     end
     parsed_timestamp = Chronic.parse(timestamp)
@@ -147,7 +166,7 @@ class TellStickController
   end
 
   def schedule_recurring(device, action, timestamp, uuid)
-    if !device.instance_of?(Device)
+    unless device.instance_of?(Device)
       return device
     end
     logger.info('Scheduling recurring task: device ' + device.id + ' (' + device.name + ') for ' + action.name + ' every ' + timestamp.to_s)
@@ -187,7 +206,7 @@ class TellStickController
 
   def list_scheduled_tasks
     sched_list = []
-    @schedules.each do |k, v|
+    @schedules.each do |_, v|
       sched_list << v
     end
     sched_list

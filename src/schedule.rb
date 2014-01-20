@@ -37,7 +37,7 @@ class Schedule
 
   def self.find_all_schedules
     schedule_rows = self.find_all
-    if nil == schedule_rows
+    unless schedule_rows
       return []
     end
     schedules = []
@@ -50,7 +50,7 @@ class Schedule
 
   def self.find_by_uuid(uuid)
     schedule_rows = self.find_by_column(:uuid, uuid)
-    if nil == schedule_rows
+    unless schedule_rows
       return nil
     end
     schedules = []

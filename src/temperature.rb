@@ -38,21 +38,9 @@ class Temperature
     })
   end
 
-  def self.find_all
-    temperature_rows = self.find_all
-    if nil == temperature_rows
-      return []
-    end
-    temperatures = []
-    temperature_rows.each do |temperature_reading, source, timestamp|
-      temperatures << Temperature.new(temperature_reading, source, timestamp)
-    end
-    temperatures
-  end
-
   def self.find_by_source(source)
     temperature_rows = self.find_by_column(:source, source)
-    if nil == temperature_rows
+    unless temperature_rows
       return []
     end
     temperatures = []
@@ -168,8 +156,8 @@ class TemperatureSensors
   def initialize
     @sensors = []
     @sensors << CachedYrTemperature
-    @sensors << OutsideTemperature
-    @sensors << InsideTemperature
+    #@sensors << OutsideTemperature
+    #@sensors << InsideTemperature
   end
 
   def get_sensors
