@@ -26,7 +26,7 @@ module Persistence
     columns = []
     names_datatypes.each do |name, type|
       case type
-        when 'Fixnum' || 'Integer' || 'TrueClass' || 'FalseClass'
+        when 'Fixnum', 'Integer', 'TrueClass', 'FalseClass'
           sql_type = 'INTEGER'
         when 'Float'
           sql_type = 'REAL'
@@ -68,7 +68,7 @@ module Persistence
 
   def quote(column_value)
     case column_value.class.to_s
-      when 'Fixnum' || 'Integer' || 'Float' then column_value
+      when 'Fixnum', 'Integer', 'Float' then column_value
       when 'FalseClass' then 0
       when 'TrueClass' then 1
       else "'" + column_value + "'"
